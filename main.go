@@ -1,19 +1,36 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
+	"os"
 	"sync/atomic"
+
+	"github.com/joho/godotenv"
+	"github.com/karimOCB/chirpy/internal/database"
+	_ "github.com/lib/pq"
 )
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
+	dbQueries *database.Queries
 }
 
 func main() {
 	port := "8080"
 	cfg := apiConfig{}
+	godotenv.Load()
+	dbURL := os.Getenv("DB_URL")
 
+	db, err := sql.Open("postgres", dbURL)
+
+	if err != nil {
+		log.Fatalf("could establish connection to database: %v", err)
+	}
+
+	cfg.dbQueries = database.New(db)
+	
 	mux := http.NewServeMux() 
 
 	server := &http.Server{
@@ -30,7 +47,7 @@ func main() {
 	
 	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
 	
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	if err != nil {
 		log.Fatalf("couldn't listen to the server: %v", err)
 	}
