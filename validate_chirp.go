@@ -50,6 +50,7 @@ func respondWithError(w http.ResponseWriter, code int, msg string, /*passedErr e
 	respondWithJSON(w, code, respBody)	
 }
 
+
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	dat, err := json.Marshal(payload)
 	if err != nil {
@@ -61,6 +62,7 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.WriteHeader(code)
 	w.Write(dat)
 }
+
 
 func validateBadWords(s string) string {
 	badWords := map[string]struct{}{
