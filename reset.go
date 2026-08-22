@@ -4,7 +4,7 @@ import "net/http"
 
 func (cfg *apiConfig) resetHandler(w http.ResponseWriter, r *http.Request) {
 	if !cfg.platform {
-		respondWithError(w, 403, "cannot reset users information")
+		respondWithError(w, http.StatusForbidden, "cannot reset users information", nil)
 	}
 
 	cfg.dbQueries.DeleteUser(r.Context())
