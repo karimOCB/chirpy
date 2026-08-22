@@ -17,7 +17,7 @@ type Chirp struct {
 	UserID uuid.UUID `json:"user_id"`
 }
 
-func (cfg *apiConfig) chirpHandler(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) createChirpHandler(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Body string `json:"body"`
 		UserID uuid.UUID `json:"user_id"`
@@ -50,4 +50,25 @@ func (cfg *apiConfig) chirpHandler(w http.ResponseWriter, r *http.Request) {
 		Body: chirpDB.Body,
 		UserID: chirpDB.UserID,
 	})
+}
+
+func (cfg *apiConfig) getChirpsHandler(w http.ResponseWriter, r * http.Request) {
+	chirpsDB, err := cfg.dbQueries.GetChirps(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error retrieving users", err)
+		return
+	}
+	
+	chirps := []Chirp{}
+	for _, chirpDB := range(chirpsDB) {
+		chirps = append(chirps, Chirp{
+			ID: chirpDB.ID,
+			CreatedAt: chirpDB.CreatedAt,
+			UpdatedAt: chirpDB.UpdatedAt,
+			Body: chirpDB.Body,
+			UserID: chirpDB.UserID,
+		})
+	}
+
+	respondWithJSON(w, http.StatusOK, chirps)
 }
