@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/karimOCB/chirpy/internal/auth"
+	"github.com/karimOCB/chirpy/internal/database"
 )
 
 type User struct {
@@ -17,6 +19,7 @@ type User struct {
 
 func (cfg *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
+		Password string `json:"password"`
 		Email string `json:"email"`
 	}
 	
@@ -30,7 +33,18 @@ func (cfg *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	db_user, err := cfg.dbQueries.CreateUser(ctx, body.Email)
+	hash, err := auth.HashPassword(body.Password)
+
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error hashing password", err)
+		return
+	}
+
+	db_user, err := cfg.dbQueries.CreateUser(ctx, database.CreateUserParams{
+		Email: body.Email,
+		HashedPassword: hash,
+	})
+
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error creating user", err)
 		return
