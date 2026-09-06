@@ -5,15 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/karimOCB/chirpy/internal/auth"
 )
 
-
 func (cfg *apiConfig) userLoginHandler(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Password string `json:"password"`
-		Email string `json:"email"`
+		Password         string `json:"password"`
+		Email            string `json:"email"`
+		ExpiresInSeconds int    `json:"expires_in_seconds"`
 	}
 
 	body := parameters{}
@@ -36,20 +37,42 @@ func (cfg *apiConfig) userLoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ok, err := auth.CheckPasswordHash(body.Password, userDB.HashedPassword)
-	
+
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "error checking user password", nil)
 		return
 	}
-	
+
 	if !ok {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect password", nil)
+		return
 	}
 
-	respondWithJSON(w, http.StatusOK, User{
-		ID: userDB.ID,
+	if body.ExpiresInSeconds == 0 || body.ExpiresInSeconds > 3600 {
+		body.ExpiresInSeconds = 3600
+	}
+
+	token, err := auth.MakeJWT(userDB.ID, cfg.tokenSecret, time.Duration(body.ExpiresInSeconds))
+
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error creating token", err)
+		return
+	}
+
+	type LoginResponse struct {
+		User
+		Token string `json:"token"`
+	}
+
+	user := User{
+		ID:        userDB.ID,
 		CreatedAt: userDB.CreatedAt,
 		UpdatedAt: userDB.UpdatedAt,
-		Email: userDB.Email,
+		Email:     userDB.Email,
+	}
+
+	respondWithJSON(w, http.StatusOK, LoginResponse{
+		User:  user,
+		Token: token,
 	})
 }

@@ -14,8 +14,9 @@ import (
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
-	dbQueries *database.Queries
-	platform bool
+	dbQueries      *database.Queries
+	platform       bool
+	tokenSecret    string
 }
 
 func main() {
@@ -23,8 +24,9 @@ func main() {
 	cfg := apiConfig{}
 	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
-	cfg.platform = os.Getenv("PLATFORM") == "dev" 
-		
+	cfg.platform = os.Getenv("PLATFORM") == "dev"
+	cfg.tokenSecret = os.Getenv("TOKEN_SECRET")
+
 	db, err := sql.Open("postgres", dbURL)
 
 	if err != nil {
@@ -32,12 +34,12 @@ func main() {
 	}
 
 	cfg.dbQueries = database.New(db)
-	
-	mux := http.NewServeMux() 
+
+	mux := http.NewServeMux()
 
 	server := &http.Server{
 		Handler: mux,
-		Addr: ":" + port,
+		Addr:    ":" + port,
 	}
 
 	filepathRoot := http.Dir(".")
@@ -50,10 +52,9 @@ func main() {
 	mux.HandleFunc("GET /api/healthz", healthzHandler)
 	mux.HandleFunc("GET /admin/metrics", cfg.metricsHandler)
 	mux.HandleFunc("POST /admin/reset", cfg.resetHandler)
-	
-		
+
 	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
-	
+
 	err = server.ListenAndServe()
 	if err != nil {
 		log.Fatalf("couldn't listen to the server: %v", err)
