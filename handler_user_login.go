@@ -8,13 +8,13 @@ import (
 	"time"
 
 	"github.com/karimOCB/chirpy/internal/auth"
+	"github.com/karimOCB/chirpy/internal/database"
 )
 
 func (cfg *apiConfig) userLoginHandler(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Password         string `json:"password"`
 		Email            string `json:"email"`
-		ExpiresInSeconds time.Duration `json:"expires_in_seconds"`
 	}
 
 	body := parameters{}
@@ -48,20 +48,24 @@ func (cfg *apiConfig) userLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if body.ExpiresInSeconds == 0 || body.ExpiresInSeconds > 3600 {
-		body.ExpiresInSeconds = time.Second * 3600
-	}
-
-	token, err := auth.MakeJWT(userDB.ID, cfg.tokenSecret, body.ExpiresInSeconds)
-
+	accessToken, err := auth.MakeJWT(userDB.ID, cfg.tokenSecret, time.Hour * 1)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "error creating token", err)
 		return
 	}
 
+	refreshToken := auth.MakeRefreshToken()
+
+	cfg.dbQueries.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		Token: refreshToken,
+		ExpiresAt: time.Now().Add(time.Hour * 24 * 60),
+		UserID: userDB.ID,
+	})
+
 	type LoginResponse struct {
 		User
 		Token string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	user := User{
@@ -73,6 +77,7 @@ func (cfg *apiConfig) userLoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	respondWithJSON(w, http.StatusOK, LoginResponse{
 		User:  user,
-		Token: token,
+		Token: accessToken,
+		RefreshToken: refreshToken,
 	})
 }
