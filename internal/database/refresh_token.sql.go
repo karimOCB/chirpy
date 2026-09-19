@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -62,4 +63,14 @@ func (q *Queries) GetUserFromRefreshToken(ctx context.Context, token string) (Re
 		&i.UserID,
 	)
 	return i, err
+}
+
+const updateRefreshToken = `-- name: UpdateRefreshToken :execresult
+UPDATE refresh_tokens
+SET revoked_at = NOW(), updated_at = NOW()
+WHERE token = $1
+`
+
+func (q *Queries) UpdateRefreshToken(ctx context.Context, token string) (sql.Result, error) {
+	return q.db.ExecContext(ctx, updateRefreshToken, token)
 }
