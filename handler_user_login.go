@@ -73,6 +73,7 @@ func (cfg *apiConfig) userLoginHandler(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: userDB.CreatedAt,
 		UpdatedAt: userDB.UpdatedAt,
 		Email:     userDB.Email,
+		IsChirpyRed: userDB.IsChirpyRed,
 	}
 
 	respondWithJSON(w, http.StatusOK, LoginResponse{
